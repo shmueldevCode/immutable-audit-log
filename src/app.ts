@@ -1,4 +1,4 @@
-import Fastify from 'fastify';
+import Fastify, { type FastifyError } from 'fastify';
 import { z } from 'zod';
 import type { Pool } from 'pg';
 import swagger from '@fastify/swagger';
@@ -30,7 +30,7 @@ export async function buildApp(pool: Pool) {
         routePrefix: '/docs',
     });
 
-    app.setErrorHandler((err, req, reply) => {
+    app.setErrorHandler((err: FastifyError, req, reply) => {
         req.log.error(err);
         if (err.statusCode && err.statusCode < 500) {
             return reply.send(err);
