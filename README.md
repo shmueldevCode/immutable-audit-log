@@ -94,6 +94,15 @@ docker compose up -d --build
 
 API's up at `http://localhost:3000`. Docs at `http://localhost:3000/docs`.
 
+If something goes wrong after a previous failed attempt (leftover Docker
+network, port conflict), clean up first:
+
+```bash
+docker compose down -v --remove-orphans
+```
+
+Then run `docker compose up -d --build` again.
+
 ## API
 
 **Append an event**
