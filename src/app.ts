@@ -7,6 +7,7 @@ import swaggerUi from '@fastify/swagger-ui';
 import rateLimit from '@fastify/rate-limit';
 import { appendEvent } from './append.js';
 import { verifyChain } from './verify.js';
+import { anchorLatestHash } from './anchor.js';
 
 export const EventSchema = z.object({
     actor: z.string().min(1),
@@ -27,7 +28,13 @@ function safeCompare(a: string, b: string): boolean {
 
 const DEV_HMAC_SECRET = 'dev-only-insecure-hmac-secret';
 
-export async function buildApp(pool: Pool, apiKey?: string, hmacSecret?: string) {
+interface AnchorOptions {
+    githubToken: string;
+    owner: string;
+    repo: string;
+}
+
+export async function buildApp(pool: Pool, apiKey?: string, hmacSecret?: string, anchorOptions?: AnchorOptions) {
     const app = Fastify({ logger: true });
     const secret = hmacSecret ?? DEV_HMAC_SECRET;
 
@@ -155,6 +162,42 @@ export async function buildApp(pool: Pool, apiKey?: string, hmacSecret?: string)
     }, async (_req, reply) => {
         return reply.send(await verifyChain(pool, secret));
     });
+
+    if (anchorOptions) {
+        app.post('/anchor', {
+            schema: {
+                summary: 'Publish the latest hash to an external anchor (GitHub commit)',
+                security: [{ apiKey: [] }],
+                response: {
+                    200: {
+                        type: 'object',
+                        properties: {
+                            seq: { type: 'number' },
+                            hash: { type: 'string' },
+                            anchoredAt: { type: 'string' },
+                            commitSha: { type: 'string' },
+                            commitUrl: { type: 'string' },
+                        },
+                    },
+                    401: {
+                        type: 'object',
+                        properties: { error: { type: 'string' }, message: { type: 'string' } },
+                    },
+                    429: {
+                        type: 'object',
+                        properties: { error: { type: 'string' }, message: { type: 'string' } },
+                    },
+                },
+            },
+        }, async (_req, reply) => {
+            const result = await anchorLatestHash(pool, {
+                githubToken: anchorOptions.githubToken,
+                owner: anchorOptions.owner,
+                repo: anchorOptions.repo,
+            });
+            return reply.send(result);
+        });
+    }
 
     return app;
 }
