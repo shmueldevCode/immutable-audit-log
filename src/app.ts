@@ -4,6 +4,7 @@ import type { Pool } from 'pg';
 import { timingSafeEqual } from 'node:crypto';
 import swagger from '@fastify/swagger';
 import swaggerUi from '@fastify/swagger-ui';
+import rateLimit from '@fastify/rate-limit';
 import { appendEvent } from './append.js';
 import { verifyChain } from './verify.js';
 
@@ -18,7 +19,6 @@ function safeCompare(a: string, b: string): boolean {
     const bufA = Buffer.from(a);
     const bufB = Buffer.from(b);
     if (bufA.length !== bufB.length) {
-        // still run a compare to avoid leaking length via timing, against a dummy
         timingSafeEqual(bufA, bufA);
         return false;
     }
@@ -49,6 +49,15 @@ export async function buildApp(pool: Pool, apiKey?: string) {
 
     await app.register(swaggerUi, {
         routePrefix: '/docs',
+    });
+
+    await app.register(rateLimit, {
+        max: 100,
+        timeWindow: '1 minute',
+        keyGenerator: (req: FastifyRequest) => {
+            const key = req.headers['x-api-key'];
+            return typeof key === 'string' ? key : req.ip;
+        },
     });
 
     app.setErrorHandler((err: FastifyError, req, reply) => {
@@ -101,6 +110,10 @@ export async function buildApp(pool: Pool, apiKey?: string) {
                     type: 'object',
                     properties: { error: { type: 'string' }, message: { type: 'string' } },
                 },
+                429: {
+                    type: 'object',
+                    properties: { error: { type: 'string' }, message: { type: 'string' } },
+                },
             },
         },
     }, async (req, reply) => {
@@ -127,6 +140,10 @@ export async function buildApp(pool: Pool, apiKey?: string) {
                     },
                 },
                 401: {
+                    type: 'object',
+                    properties: { error: { type: 'string' }, message: { type: 'string' } },
+                },
+                429: {
                     type: 'object',
                     properties: { error: { type: 'string' }, message: { type: 'string' } },
                 },
