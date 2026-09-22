@@ -1,14 +1,16 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { Pool } from 'pg';
+import type { FastifyInstance } from 'fastify';
 import { buildApp } from './app.js';
 
 const pool = new Pool({
   connectionString: 'postgres://audit_owner:owner-pass@localhost:5434/audit_test',
 });
 
-const app = buildApp(pool);
+let app: FastifyInstance;
 
 beforeAll(async () => {
+  app = await buildApp(pool);
   await pool.query('ALTER TABLE audit_log DISABLE TRIGGER no_update_delete');
   await pool.query('DELETE FROM audit_log');
   await pool.query('ALTER TABLE audit_log ENABLE TRIGGER no_update_delete');

@@ -10,12 +10,16 @@ pool.on('error', (err) => {
   console.error('Unexpected error on idle client', err);
 });
 
-const app = buildApp(pool);
+async function main() {
+  const app = await buildApp(pool);
 
-app.listen({ port: 3000, host: '0.0.0.0' }, (err, address) => {
-  if (err) {
-    app.log.error(err);
-    process.exit(1);
-  }
-  console.log(`Server listening at ${address}`);
-});
+  app.listen({ port: 3000, host: '0.0.0.0' }, (err, address) => {
+    if (err) {
+      app.log.error(err);
+      process.exit(1);
+    }
+    console.log(`Server listening at ${address}`);
+  });
+}
+
+main();
