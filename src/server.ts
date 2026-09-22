@@ -6,6 +6,10 @@ const pool = new Pool({
     process.env.DATABASE_URL ?? 'postgres://audit_app:app-pass@localhost:5433/audit',
 });
 
+pool.on('error', (err) => {
+  console.error('Unexpected error on idle client', err);
+});
+
 const app = buildApp(pool);
 
 app.listen({ port: 3000, host: '0.0.0.0' }, (err, address) => {

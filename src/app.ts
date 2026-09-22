@@ -14,6 +14,14 @@ export const EventSchema = z.object({
 export function buildApp(pool: Pool) {
     const app = Fastify({ logger: true });
 
+    app.setErrorHandler((err, req, reply) => {
+        req.log.error(err);
+        if (reply.statusCode < 500 && reply.statusCode !== 200) {
+            return reply.send(err);
+        }
+        return reply.code(500).send({ error: "Internal Server Error", message: "Something went wrong" });
+    });
+
     app.post('/events', async (req, reply) => {
         const parsed = EventSchema.safeParse(req.body);
         if (!parsed.success) {
