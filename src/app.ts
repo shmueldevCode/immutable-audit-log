@@ -32,7 +32,7 @@ export async function buildApp(pool: Pool) {
 
     app.setErrorHandler((err, req, reply) => {
         req.log.error(err);
-        if (reply.statusCode < 500 && reply.statusCode !== 200) {
+        if (err.statusCode && err.statusCode < 500) {
             return reply.send(err);
         }
         return reply.code(500).send({ error: "Internal Server Error", message: "Something went wrong" });
