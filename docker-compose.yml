@@ -10,6 +10,11 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./migrations:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U audit_owner -d audit"]
+      interval: 2s
+      timeout: 3s
+      retries: 10
 
   test-db:
     image: postgres:16
@@ -21,6 +26,16 @@ services:
       - "5434:5432"
     volumes:
       - ./migrations:/docker-entrypoint-initdb.d:ro
+
+  app:
+    build: .
+    environment:
+      DATABASE_URL: postgres://audit_app:app-pass@db:5432/audit
+    ports:
+      - "3000:3000"
+    depends_on:
+      db:
+        condition: service_healthy
 
 volumes:
   pgdata:
