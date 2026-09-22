@@ -1,6 +1,16 @@
 import { Pool } from 'pg';
 import { buildApp } from './app.js';
 
+const REQUIRED_ENV_VARS = ['API_KEY', 'HMAC_SECRET'] as const;
+
+for (const key of REQUIRED_ENV_VARS) {
+  if (!process.env[key]) {
+    console.error(`Missing required environment variable: ${key}`);
+    console.error('Refusing to start without it — see .env.example / README.');
+    process.exit(1);
+  }
+}
+
 const pool = new Pool({
   connectionString:
     process.env.DATABASE_URL ?? 'postgres://audit_app:app-pass@localhost:5433/audit',

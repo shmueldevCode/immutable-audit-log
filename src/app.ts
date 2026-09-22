@@ -26,7 +26,7 @@ function safeCompare(a: string, b: string): boolean {
     return timingSafeEqual(bufA, bufB);
 }
 
-const DEV_HMAC_SECRET = 'dev-only-insecure-hmac-secret';
+const TEST_ONLY_HMAC_SECRET = 'test-only-hmac-secret-never-used-in-production';
 
 interface AnchorOptions {
     githubToken: string;
@@ -36,7 +36,7 @@ interface AnchorOptions {
 
 export async function buildApp(pool: Pool, apiKey?: string, hmacSecret?: string, anchorOptions?: AnchorOptions) {
     const app = Fastify({ logger: true });
-    const secret = hmacSecret ?? DEV_HMAC_SECRET;
+    const secret = hmacSecret ?? TEST_ONLY_HMAC_SECRET;
 
     await app.register(swagger, {
         openapi: {
