@@ -6,7 +6,7 @@ import swagger from '@fastify/swagger';
 import swaggerUi from '@fastify/swagger-ui';
 import rateLimit from '@fastify/rate-limit';
 import { appendEvent } from './append.js';
-import { verifyChain } from './verify.js';
+import { verifyChainFull, verifyChainIncremental } from './verify.js';
 import { anchorLatestHash } from './anchor.js';
 
 export const EventSchema = z.object({
@@ -135,10 +135,16 @@ export async function buildApp(pool: Pool, apiKey?: string, hmacSecret?: string,
         return reply.code(201).send(result);
     });
 
-    app.get('/verify', {
+        app.get('/verify', {
         schema: {
             summary: 'Walk the full audit chain and check its integrity',
             security: [{ apiKey: [] }],
+            querystring: {
+                type: 'object',
+                properties: {
+                    full: { type: 'string', enum: ['true', 'false'], description: 'Force a full re-verification instead of incremental' },
+                },
+            },
             response: {
                 200: {
                     type: 'object',
@@ -160,7 +166,11 @@ export async function buildApp(pool: Pool, apiKey?: string, hmacSecret?: string,
             },
         },
     }, async (_req, reply) => {
-        return reply.send(await verifyChain(pool, secret));
+        const query = _req.query as { full?: string };
+        const result = query.full === 'true'
+            ? await verifyChainFull(pool, secret)
+            : await verifyChainIncremental(pool, secret);
+        return reply.send(result);
     });
 
     if (anchorOptions) {
