@@ -32,6 +32,7 @@ services:
     environment:
       DATABASE_URL: postgres://audit_app:app-pass@db:5432/audit
       API_KEY: 746a5a8a32e2fd39e8890cb7c89feacbec70ca0c759fd0d3d519694f68811811
+      HMAC_SECRET: 65a14835667fccff6e39ee7a790fec6b11e1502921b93e1626fc25920f8709cc
     ports:
       - "3000:3000"
     depends_on:

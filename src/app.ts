@@ -25,8 +25,11 @@ function safeCompare(a: string, b: string): boolean {
     return timingSafeEqual(bufA, bufB);
 }
 
-export async function buildApp(pool: Pool, apiKey?: string) {
+const DEV_HMAC_SECRET = 'dev-only-insecure-hmac-secret';
+
+export async function buildApp(pool: Pool, apiKey?: string, hmacSecret?: string) {
     const app = Fastify({ logger: true });
+    const secret = hmacSecret ?? DEV_HMAC_SECRET;
 
     await app.register(swagger, {
         openapi: {
@@ -121,7 +124,7 @@ export async function buildApp(pool: Pool, apiKey?: string) {
         if (!parsed.success) {
             return reply.code(400).send({ error: parsed.error.issues });
         }
-        const result = await appendEvent(pool, parsed.data);
+        const result = await appendEvent(pool, parsed.data, secret);
         return reply.code(201).send(result);
     });
 
@@ -150,7 +153,7 @@ export async function buildApp(pool: Pool, apiKey?: string) {
             },
         },
     }, async (_req, reply) => {
-        return reply.send(await verifyChain(pool));
+        return reply.send(await verifyChain(pool, secret));
     });
 
     return app;

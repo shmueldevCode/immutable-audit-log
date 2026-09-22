@@ -1,4 +1,4 @@
-import { createHash } from 'node:crypto';
+import { createHash, createHmac } from 'node:crypto';
 
 export const GENESIS = '0'.repeat(64);
 
@@ -30,4 +30,20 @@ export function recomputeHash(row: {
     action: row.action, resource: row.resource, payload: row.payload,
     prevHash: row.prev_hash,
   })
+}
+
+export const computeHmac = (secret: string, e: EntryFields & { hash: string }) =>
+  createHmac('sha256', secret)
+    .update(canon([e.seq, e.id, e.ts, e.actor, e.action, e.resource, e.payload, e.prevHash, e.hash]))
+    .digest('hex');
+
+export function recomputeHmac(secret: string, row: {
+  seq: number; id: string; ts: string; actor: string;
+  action: string; resource: string; payload: unknown; prev_hash: string; hash: string;
+}): string {
+  return computeHmac(secret, {
+    seq: row.seq, id: row.id, ts: row.ts, actor: row.actor,
+    action: row.action, resource: row.resource, payload: row.payload,
+    prevHash: row.prev_hash, hash: row.hash,
+  });
 }

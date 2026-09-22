@@ -11,7 +11,7 @@ pool.on('error', (err) => {
 });
 
 async function main() {
-  const app = await buildApp(pool, process.env.API_KEY);
+  const app = await buildApp(pool, process.env.API_KEY, process.env.HMAC_SECRET);
 
   app.listen({ port: 3000, host: '0.0.0.0' }, (err, address) => {
     if (err) {
