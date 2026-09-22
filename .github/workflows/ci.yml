@@ -41,7 +41,10 @@ jobs:
       - name: Apply migrations
         run: |
           sudo apt-get install -y postgresql-client
-          PGPASSWORD=owner-pass psql -h localhost -p 5434 -U audit_owner -d audit_test -f migrations/001_init.sql
+          for f in migrations/*.sql; do
+            echo "Applying $f"
+            PGPASSWORD=owner-pass psql -h localhost -p 5434 -U audit_owner -d audit_test -f "$f"
+          done
 
       - name: Run tests
         run: npm test
