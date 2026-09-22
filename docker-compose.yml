@@ -28,6 +28,8 @@ services:
       - ./migrations:/docker-entrypoint-initdb.d:ro
 
   app:
+    env_file:
+      - .env
     build: .
     environment:
       DATABASE_URL: postgres://audit_app:app-pass@db:5432/audit
