@@ -31,6 +31,7 @@ services:
     build: .
     environment:
       DATABASE_URL: postgres://audit_app:app-pass@db:5432/audit
+      API_KEY: 746a5a8a32e2fd39e8890cb7c89feacbec70ca0c759fd0d3d519694f68811811
     ports:
       - "3000:3000"
     depends_on:

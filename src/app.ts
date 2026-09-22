@@ -1,6 +1,7 @@
-import Fastify, { type FastifyError } from 'fastify';
+import Fastify, { type FastifyError, type FastifyRequest, type FastifyReply } from 'fastify';
 import { z } from 'zod';
 import type { Pool } from 'pg';
+import { timingSafeEqual } from 'node:crypto';
 import swagger from '@fastify/swagger';
 import swaggerUi from '@fastify/swagger-ui';
 import { appendEvent } from './append.js';
@@ -13,7 +14,18 @@ export const EventSchema = z.object({
     payload: z.record(z.string(), z.unknown()),
 });
 
-export async function buildApp(pool: Pool) {
+function safeCompare(a: string, b: string): boolean {
+    const bufA = Buffer.from(a);
+    const bufB = Buffer.from(b);
+    if (bufA.length !== bufB.length) {
+        // still run a compare to avoid leaking length via timing, against a dummy
+        timingSafeEqual(bufA, bufA);
+        return false;
+    }
+    return timingSafeEqual(bufA, bufB);
+}
+
+export async function buildApp(pool: Pool, apiKey?: string) {
     const app = Fastify({ logger: true });
 
     await app.register(swagger, {
@@ -22,6 +34,15 @@ export async function buildApp(pool: Pool) {
                 title: 'Immutable Audit Log Engine',
                 description: 'A tamper-evident audit logging service with cryptographic hash chaining.',
                 version: '1.0.0',
+            },
+            components: {
+                securitySchemes: {
+                    apiKey: {
+                        type: 'apiKey',
+                        name: 'x-api-key',
+                        in: 'header',
+                    },
+                },
             },
         },
     });
@@ -38,9 +59,22 @@ export async function buildApp(pool: Pool) {
         return reply.code(500).send({ error: "Internal Server Error", message: "Something went wrong" });
     });
 
+    if (apiKey) {
+        app.addHook('onRequest', async (req: FastifyRequest, reply: FastifyReply) => {
+            if (req.url.startsWith('/docs')) {
+                return;
+            }
+            const provided = req.headers['x-api-key'];
+            if (typeof provided !== 'string' || !safeCompare(provided, apiKey)) {
+                return reply.code(401).send({ error: 'Unauthorized', message: 'Missing or invalid API key' });
+            }
+        });
+    }
+
     app.post('/events', {
         schema: {
             summary: 'Append a new event to the audit log',
+            security: [{ apiKey: [] }],
             body: {
                 type: 'object',
                 required: ['actor', 'action', 'resource', 'payload'],
@@ -63,6 +97,10 @@ export async function buildApp(pool: Pool) {
                     type: 'object',
                     properties: { error: {} },
                 },
+                401: {
+                    type: 'object',
+                    properties: { error: { type: 'string' }, message: { type: 'string' } },
+                },
             },
         },
     }, async (req, reply) => {
@@ -77,6 +115,7 @@ export async function buildApp(pool: Pool) {
     app.get('/verify', {
         schema: {
             summary: 'Walk the full audit chain and check its integrity',
+            security: [{ apiKey: [] }],
             response: {
                 200: {
                     type: 'object',
@@ -86,6 +125,10 @@ export async function buildApp(pool: Pool) {
                         brokenAt: { type: 'number' },
                         reason: { type: 'string' },
                     },
+                },
+                401: {
+                    type: 'object',
+                    properties: { error: { type: 'string' }, message: { type: 'string' } },
                 },
             },
         },
